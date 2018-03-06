@@ -1,0 +1,16 @@
+body {
+  font-family: sans-serif;
+  font-size: 18px;
+}
+
+.BottomPadding {
+  margin-bottom: 0.8rem;
+}
+
+.VerticalPadding {
+  margin: 0.8rem 0;
+}
+
+.HairlineText {
+  color: #ccc;
+}
