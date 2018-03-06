@@ -1,0 +1,11 @@
+{
+	"scripts": {
+		"start": "nwb serve-react-app",
+		"build": "nwb build-react-app"
+	},
+	"dependencies": {
+		"nwb": "^0.21.5",
+		"react": "^16.2.0",
+		"react-dom": "^16.2.0"
+	}
+}
