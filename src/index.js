@@ -1,36 +1,92 @@
-// @flow
+// @flow weak
 
 import * as React from 'react';
 import { render } from 'react-dom';
 
-import './style.css'
+import './style.css';
 
 import * as ui from './ui';
+import { searchFlights } from './requests';
+import { strDateOnly, addMonth } from './dateutils';
 
-class FlightSearchForm extends React.Component {
+function DateInput(props) {
+  return <input className="DateInput" type="date" {...props} />;
+}
+
+class FlightSearchForm extends React.Component<*, *> {
+  constructor(props) {
+    super(props);
+
+    const today = new Date();
+    this.state = {
+      fromCode: 'PRG',
+      toCode: 'BCN',
+      fromDate: strDateOnly(today),
+      toDate: strDateOnly(addMonth(today)),
+    };
+  }
+
   render() {
+    const { fromCode, toCode, fromDate, toDate } = this.state;
     return (
       <div>
         <p>Search or flight!</p>
         <div>
           <span>From: </span>
-          <input placeholder="Where are you?" />
+          <input
+            value={fromCode}
+            onChange={e => {
+              this.setState({ fromCode: e.target.value });
+            }}
+            className="AirportInput"
+            placeholder="Where are you? e.g. PRG"
+          />
         </div>
         <div>
           <span>To: </span>
-          <input placeholder="Where do you go?" />
+          <input
+            value={toCode}
+            onChange={e => {
+              this.setState({ toCode: e.target.value });
+            }}
+            className="AirportInput"
+            placeholder="Where do you go? e.g. BCN"
+          />
         </div>
         <div>
-          <span>Date: </span>
-          <input placeholder="When do you fly away?" />
+          <span>From Date: </span>
+          <DateInput
+            value={fromDate}
+            onChange={e => {
+              this.setState({ fromDate: e.target.value });
+            }}
+            placeholder="When do you fly away?"
+          />
         </div>
-        <button type="submit">Search</button>
+        <div>
+          <span>Till Date: </span>
+          <DateInput
+            value={toDate}
+            onChange={e => {
+              this.setState({ toDate: e.target.value });
+            }}
+            placeholder="..."
+          />
+        </div>
+        <button
+          type="submit"
+          onClick={() => {
+            this.props.onSearch({ fromCode, toCode, fromDate, toDate });
+          }}
+        >
+          Search
+        </button>
       </div>
     );
   }
 }
 
-class ResultItem extends React.Component {
+class ResultItem extends React.Component<*, *> {
   render() {
     return (
       <div>
@@ -55,7 +111,7 @@ class ResultItem extends React.Component {
   }
 }
 
-class SearchResults extends React.Component {
+class SearchResults extends React.Component<*, *> {
   render() {
     return (
       <div>
@@ -73,11 +129,21 @@ class SearchResults extends React.Component {
   }
 }
 
-class FlightSearchPage extends React.Component {
+class FlightSearchPage extends React.Component<*, *> {
+  constructor(props) {
+    super(props);
+  }
+
+  onSearch = params => {
+    searchFlights(params).then(data => {
+      console.log('data', data);
+    });
+  };
+
   render() {
     return (
       <div>
-        <FlightSearchForm />
+        <FlightSearchForm onSearch={this.onSearch} />
         <ui.VerticalPadding />
         <SearchResults />
       </div>

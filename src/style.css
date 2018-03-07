@@ -14,3 +14,7 @@ body {
 .HairlineText {
   color: #ccc;
 }
+
+.AirportInput {
+  min-width: 15rem;
+}
