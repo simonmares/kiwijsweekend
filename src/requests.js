@@ -49,7 +49,7 @@ export function searchFlights(params: {
   toCode: string,
   fromDate: string,
   toDate: string,
-}) {
+}): Promise<Array<any>> {
   const variables = {
     fromCode: params.fromCode,
     toCode: params.toCode,

@@ -73,6 +73,7 @@ class FlightSearchForm extends React.Component<*, *> {
             placeholder="..."
           />
         </div>
+        <ui.VerticalSpacing />
         <button
           type="submit"
           onClick={() => {
@@ -112,40 +113,127 @@ class ResultItem extends React.Component<*, *> {
 }
 
 class SearchResults extends React.Component<*, *> {
+  static pageSize = 5;
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      ...this.getPaginationState(props),
+    };
+  }
+
+  componentWillReceiveProps(nextProps) {
+    const paginationState = this.getPaginationState(nextProps);
+    this.setState(paginationState);
+  }
+
+  getPaginationState(props) {
+    const maxPage = Math.ceil(props.results.length / 5);
+
+    return {
+      curPage: 0,
+      maxPage: 3,
+    };
+  }
+
+  getOffsetAndLimit() {
+    const { pageSize } = SearchResults;
+    const offset = this.state.curPage * pageSize;
+    const limit = offset + pageSize;
+    return [offset, limit];
+  }
+
+  hasNextPage() {
+    return this.state.curPage !== this.state.maxPage;
+  }
+
+  onNextPage = () => {
+    const { maxPage } = this.state;
+    const nextPage = this.state.curPage + 1;
+    this.setState({ curPage: nextPage <= maxPage ? nextPage : maxPage });
+  };
+
+  onPrevPage = () => {
+    const prevPage = this.state.curPage - 1;
+    this.setState({ curPage: prevPage >= 0 ? prevPage : 0 });
+  };
+
+  renderAllPaginated() {
+    return <span>Hint: You can ease your search terms and try again to find more.</span>;
+  }
+
   render() {
+    const { curPage, maxPage } = this.state;
+    const { results } = this.props;
+
+    const hasNext = this.hasNextPage();
+    const hasPrev = curPage != 0;
+
+    const [offset, limit] = this.getOffsetAndLimit();
+    const itemsToShow = results.slice(offset, limit);
+
     return (
       <div>
-        <ResultItem />
-        <ui.BottomPadding />
-        <ResultItem />
-        <ui.BottomPadding />
-        <ResultItem />
-        <ui.BottomPadding />
-        <ResultItem />
-        <ui.BottomPadding />
-        <ResultItem />
+        {itemsToShow.map(item => {
+          return (
+            <React.Fragment key={item.id}>
+              <ResultItem item={item} />
+              <ui.BottomSpacing />
+            </React.Fragment>
+          );
+        })}
+        <ui.VisibilityHidden isVisible={hasPrev}>
+          <button onClick={this.onPrevPage}>Previous</button>
+        </ui.VisibilityHidden>
+        <ui.HorizontalTextSpacing />
+        Results #{curPage + 1}/{maxPage + 1}
+        <ui.HorizontalTextSpacing />
+        {hasNext ? <button onClick={this.onNextPage}>Next</button> : this.renderAllPaginated()}
       </div>
     );
   }
 }
 
-class FlightSearchPage extends React.Component<*, *> {
+class FlightSearchPage extends React.Component<
+  *,
+  {
+    searchResults: Array<*>,
+    searchStatus: 'idle' | 'fetching' | 'fetched' | 'failed' | 'refetching',
+  }
+> {
   constructor(props) {
     super(props);
+
+    this.state = { searchResults: [], searchStatus: 'idle' };
   }
 
   onSearch = params => {
-    searchFlights(params).then(data => {
-      console.log('data', data);
-    });
+    this.setState({ searchStatus: 'fetching' });
+
+    const onErr = () => {
+      this.setState({ searchStatus: 'failed' });
+    };
+
+    const onOk = data => {
+      this.setState({ searchStatus: 'fetched' });
+      this.setState({ searchResults: data });
+    };
+
+    searchFlights(params).then(onOk, onErr);
   };
 
   render() {
+    const { searchStatus } = this.state;
     return (
       <div>
-        <FlightSearchForm onSearch={this.onSearch} />
-        <ui.VerticalPadding />
-        <SearchResults />
+        <FlightSearchForm onSearch={this.onSearch} searchStatus={searchStatus} />
+        {searchStatus === 'fetched' && (
+          <React.Fragment>
+            <ui.VerticalSpacing />
+            <SearchResults results={this.state.searchResults} />
+          </React.Fragment>
+        )}
       </div>
     );
   }

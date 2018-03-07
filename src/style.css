@@ -3,12 +3,16 @@ body {
   font-size: 18px;
 }
 
-.BottomPadding {
+.BottomSpacing {
   margin-bottom: 0.8rem;
 }
 
-.VerticalPadding {
+.VerticalSpacing {
   margin: 0.8rem 0;
+}
+
+.HorizontalTextSpacing {
+  margin: 0 0.4rem;
 }
 
 .HairlineText {
@@ -17,4 +21,8 @@ body {
 
 .AirportInput {
   min-width: 15rem;
+}
+
+.VisibilityHidden {
+  visibility: hidden;
 }
