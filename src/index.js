@@ -13,6 +13,14 @@ function DateInput(props) {
   return <input className="DateInput" type="date" {...props} />;
 }
 
+function InlineHint(props) {
+  return (
+    <span title="Hint">
+      <ui.HairlineText>{props.children}</ui.HairlineText>
+    </span>
+  );
+}
+
 class FlightSearchForm extends React.Component<*, *> {
   constructor(props) {
     super(props);
@@ -26,8 +34,20 @@ class FlightSearchForm extends React.Component<*, *> {
     };
   }
 
+  getSearchStates() {
+    const { searchStatus } = this.props;
+    const isSearching = searchStatus === 'fetching';
+    const searchFailed = searchStatus === 'failed';
+    return {
+      searchFailed,
+      isSearching,
+    };
+  }
+
   render() {
     const { fromCode, toCode, fromDate, toDate } = this.state;
+
+    const { isSearching, searchFailed } = this.getSearchStates();
     return (
       <div>
         <p>Search or flight!</p>
@@ -76,12 +96,21 @@ class FlightSearchForm extends React.Component<*, *> {
         <ui.VerticalSpacing />
         <button
           type="submit"
+          disabled={isSearching}
           onClick={() => {
             this.props.onSearch({ fromCode, toCode, fromDate, toDate });
           }}
         >
-          Search
+          {isSearching ? 'Searching ...' : 'Search'}
         </button>
+        {searchFailed && (
+          <React.Fragment>
+            <ui.HorizontalTextSpacing />
+            <span>
+              Search failed. <InlineHint>Change search terms and/or try again.</InlineHint>
+            </span>
+          </React.Fragment>
+        )}
       </div>
     );
   }
@@ -112,7 +141,7 @@ class ResultItem extends React.Component<*, *> {
   }
 }
 
-class SearchResults extends React.Component<*, *> {
+class SearchResults extends React.Component<{ results: Array<*> }, *> {
   static pageSize = 5;
 
   constructor(props) {
@@ -133,7 +162,7 @@ class SearchResults extends React.Component<*, *> {
 
     return {
       curPage: 0,
-      maxPage: 3,
+      maxPage,
     };
   }
 
@@ -160,7 +189,7 @@ class SearchResults extends React.Component<*, *> {
   };
 
   renderAllPaginated() {
-    return <span>Hint: You can ease your search terms and try again to find more.</span>;
+    return <InlineHint>You can ease your search terms to find more.</InlineHint>;
   }
 
   render() {
@@ -168,7 +197,7 @@ class SearchResults extends React.Component<*, *> {
     const { results } = this.props;
 
     const hasNext = this.hasNextPage();
-    const hasPrev = curPage != 0;
+    const hasPrev = curPage !== 0;
 
     const [offset, limit] = this.getOffsetAndLimit();
     const itemsToShow = results.slice(offset, limit);
@@ -187,7 +216,7 @@ class SearchResults extends React.Component<*, *> {
           <button onClick={this.onPrevPage}>Previous</button>
         </ui.VisibilityHidden>
         <ui.HorizontalTextSpacing />
-        Results #{curPage + 1}/{maxPage + 1}
+        Results {curPage + 1}/{maxPage + 1}
         <ui.HorizontalTextSpacing />
         {hasNext ? <button onClick={this.onNextPage}>Next</button> : this.renderAllPaginated()}
       </div>
@@ -199,7 +228,7 @@ class FlightSearchPage extends React.Component<
   *,
   {
     searchResults: Array<*>,
-    searchStatus: 'idle' | 'fetching' | 'fetched' | 'failed' | 'refetching',
+    searchStatus: 'idle' | 'fetching' | 'fetched' | 'failed',
   }
 > {
   constructor(props) {
@@ -223,17 +252,24 @@ class FlightSearchPage extends React.Component<
     searchFlights(params).then(onOk, onErr);
   };
 
+  renderResults() {
+    const { searchResults } = this.state;
+
+    if (searchResults.length) {
+      return <SearchResults results={searchResults} />;
+    }
+
+    return <span>No results for search terms.</span>;
+  }
+
   render() {
     const { searchStatus } = this.state;
+    const resultsFetched = searchStatus === 'fetched';
     return (
       <div>
         <FlightSearchForm onSearch={this.onSearch} searchStatus={searchStatus} />
-        {searchStatus === 'fetched' && (
-          <React.Fragment>
-            <ui.VerticalSpacing />
-            <SearchResults results={this.state.searchResults} />
-          </React.Fragment>
-        )}
+        <ui.VerticalSpacing />
+        {resultsFetched && this.renderResults()}
       </div>
     );
   }
