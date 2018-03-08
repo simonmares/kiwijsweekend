@@ -3,7 +3,7 @@
 const graphqlURL = 'https://graphql.kiwi.com/';
 
 const searchFlightsQuery = `
-query search($fromCode: String, $toCode: String, $fromDate: Date, $toDate: Date) {
+query search($fromCode: String!, $toCode: String!, $fromDate: Date!, $toDate: Date!) {
   allFlights(search: {from: {location: $fromCode}, to: {location: $toCode}, date: {from: $fromDate, to: $toDate}}) {
     pageInfo {
       hasNextPage
@@ -14,19 +14,26 @@ query search($fromCode: String, $toCode: String, $fromDate: Date, $toDate: Date)
       node {
         id
         departure {
-          time
-          airport {
-            name
-            city {
-              name
-            }
-          }
+          ...DestinationInfo
+        }
+        arrival {
+          ...DestinationInfo
         }
         price {
           amount
           currency
         }
       }
+    }
+  }
+}
+
+fragment DestinationInfo on RouteStop {
+  time
+  airport {
+    name
+    city {
+      name
     }
   }
 }
@@ -40,8 +47,19 @@ function postGraphQL(query, variables) {
   }).then(response => response.json());
 }
 
+function processNode(node) {
+  const { departure } = node;
+  return {
+    ...node,
+    departure: {
+      ...departure,
+      time: new Date(departure.time),
+    },
+  };
+}
+
 function processSearchQuery(gqlResult) {
-  return gqlResult.data.allFlights.edges.map(e => e.node);
+  return gqlResult.data.allFlights.edges.map(e => processNode(e.node));
 }
 
 export function searchFlights(params: {

@@ -20,7 +20,7 @@ body {
 }
 
 .AirportInput {
-  min-width: 15rem;
+  width: 5rem;
 }
 
 .VisibilityHidden {

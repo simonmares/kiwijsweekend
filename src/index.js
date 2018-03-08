@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { render } from 'react-dom';
 
+import idx from 'idx';
+
 import './style.css';
 
 import * as ui from './ui';
@@ -59,7 +61,7 @@ class FlightSearchForm extends React.Component<*, *> {
               this.setState({ fromCode: e.target.value });
             }}
             className="AirportInput"
-            placeholder="Where are you? e.g. PRG"
+            placeholder="e.g. PRG"
           />
         </div>
         <div>
@@ -70,7 +72,7 @@ class FlightSearchForm extends React.Component<*, *> {
               this.setState({ toCode: e.target.value });
             }}
             className="AirportInput"
-            placeholder="Where do you go? e.g. BCN"
+            placeholder="e.g. BCN"
           />
         </div>
         <div>
@@ -80,7 +82,6 @@ class FlightSearchForm extends React.Component<*, *> {
             onChange={e => {
               this.setState({ fromDate: e.target.value });
             }}
-            placeholder="When do you fly away?"
           />
         </div>
         <div>
@@ -116,25 +117,63 @@ class FlightSearchForm extends React.Component<*, *> {
   }
 }
 
-class ResultItem extends React.Component<*, *> {
+class FlightResult extends React.Component<{ flight: Object }, *> {
+  formatDateTime = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).format;
+
+  getCityName(routeStop) {
+    return idx(routeStop, _ => _.airport.city.name) || '';
+  }
+
+  getAirportName(routeStop) {
+    return idx(routeStop, _ => _.airport.name) || '';
+  }
+
+  getDepartureTime(flight) {
+    return idx(flight, _ => _.departure.time) || '';
+  }
+
+  getFormattedCurrency(flight) {
+    const currency = idx(flight, _ => _.price.currency) || '';
+    return currency === 'EUR' ? '€' : currency;
+  }
+
+  getPrice(flight) {
+    return idx(flight, _ => _.price.amount) || '';
+  }
+
   render() {
+    const { flight } = this.props;
+
     return (
       <div>
         <div>
           <ui.HairlineText>From: </ui.HairlineText>
-          <span>...</span>
+          <span title={this.getCityName(flight.departure)}>
+            {this.getAirportName(flight.departure)}
+          </span>
         </div>
         <div>
           <ui.HairlineText>To: </ui.HairlineText>
-          <span>...</span>
+          <span title={this.getCityName(flight.arrival)}>
+            {this.getAirportName(flight.arrival)}
+          </span>
         </div>
         <div>
           <ui.HairlineText>When: </ui.HairlineText>
-          <span>...</span>
+          <span>{this.formatDateTime(this.getDepartureTime(flight))}</span>
         </div>
         <div>
           <ui.HairlineText>Price: </ui.HairlineText>
-          <span>...&nbsp;€</span>
+          <span>
+            {this.getPrice(flight)}&nbsp;{this.getFormattedCurrency(flight)}
+          </span>
         </div>
       </div>
     );
@@ -158,8 +197,12 @@ class SearchResults extends React.Component<{ results: Array<*> }, *> {
   }
 
   getPaginationState(props) {
-    const maxPage = Math.ceil(props.results.length / 5);
+    if (!props.results.length) {
+      return { curPage: 0, maxPage: 0 };
+    }
 
+    // - 1 because first page is 0 not 1
+    const maxPage = Math.ceil(props.results.length / SearchResults.pageSize) - 1;
     return {
       curPage: 0,
       maxPage,
@@ -204,14 +247,6 @@ class SearchResults extends React.Component<{ results: Array<*> }, *> {
 
     return (
       <div>
-        {itemsToShow.map(item => {
-          return (
-            <React.Fragment key={item.id}>
-              <ResultItem item={item} />
-              <ui.BottomSpacing />
-            </React.Fragment>
-          );
-        })}
         <ui.VisibilityHidden isVisible={hasPrev}>
           <button onClick={this.onPrevPage}>Previous</button>
         </ui.VisibilityHidden>
@@ -219,6 +254,15 @@ class SearchResults extends React.Component<{ results: Array<*> }, *> {
         Results {curPage + 1}/{maxPage + 1}
         <ui.HorizontalTextSpacing />
         {hasNext ? <button onClick={this.onNextPage}>Next</button> : this.renderAllPaginated()}
+        <ui.VerticalSpacing />
+        {itemsToShow.map(item => {
+          return (
+            <React.Fragment key={item.id}>
+              <FlightResult flight={item} />
+              <ui.BottomSpacing />
+            </React.Fragment>
+          );
+        })}
       </div>
     );
   }
@@ -259,7 +303,11 @@ class FlightSearchPage extends React.Component<
       return <SearchResults results={searchResults} />;
     }
 
-    return <span>No results for search terms.</span>;
+    return (
+      <span>
+        No flights found. <InlineHint>Ease your terms to find something for you.</InlineHint>
+      </span>
+    );
   }
 
   render() {
