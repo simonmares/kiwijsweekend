@@ -1,11 +1,28 @@
 {
 	"scripts": {
 		"start": "nwb serve-react-app",
-		"build": "nwb build-react-app"
+		"build": "nwb build-react-app",
+		"format": "whys-scripts format",
+		"lint": "whys-scripts lint-react",
+		"flow": "flow",
+		"check": "npm run format && npm run lint && npm run flow && npm run test"
 	},
 	"dependencies": {
-		"nwb": "^0.21.5",
+		"downshift": "^1.30.0",
+		"idx": "^2.2.0",
 		"react": "^16.2.0",
 		"react-dom": "^16.2.0"
+	},
+	"devDependencies": {
+		"nwb": "^0.21.5",
+		"whys-scripts": "^1.1.1",
+		"flow-bin": "^0.66.0"
+	},
+	"name": "",
+	"version": "",
+	"whys-scripts": {
+		"src": [
+			"src/**/*.js"
+		]
 	}
 }

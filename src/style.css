@@ -20,9 +20,45 @@ body {
 }
 
 .AirportInput {
-  width: 5rem;
+  width: 6rem;
 }
 
 .VisibilityHidden {
   visibility: hidden;
+}
+
+.InputRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+/*  */
+
+.AutocompleteBox {
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  max-width: 20rem;
+  position: relative;
+}
+
+.AutocompleteInput {
+  width: 100%;
+}
+
+.OverlayPositionBox {
+  position: relative;
+}
+
+.AutocompleteOverlay {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  max-height: 20rem;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+}
+
+.FlightSearchForm {
+  max-width: 15rem;
 }

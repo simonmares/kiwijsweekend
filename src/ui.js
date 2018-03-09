@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 
+// Generic UI
+
 export function VerticalSpacing() {
   return <div className="VerticalSpacing" />;
 }
@@ -20,4 +22,10 @@ export function HairlineText(props) {
 
 export function VisibilityHidden(props) {
   return <span className={props.isVisible ? '' : 'VisibilityHidden'}>{props.children}</span>;
+}
+
+// App UI
+
+export function InputRow(props) {
+  return <div className="InputRow">{props.children}</div>;
 }

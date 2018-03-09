@@ -2,13 +2,14 @@
 
 import * as React from 'react';
 import { render } from 'react-dom';
+import Downshift from 'downshift';
 
 import idx from 'idx';
 
 import './style.css';
 
 import * as ui from './ui';
-import { searchFlights } from './requests';
+import { searchFlights, searchLocations } from './requests';
 import { strDateOnly, addMonth } from './dateutils';
 
 function DateInput(props) {
@@ -29,8 +30,8 @@ class FlightSearchForm extends React.Component<*, *> {
 
     const today = new Date();
     this.state = {
-      fromCode: 'PRG',
-      toCode: 'BCN',
+      fromCode: '',
+      toCode: '',
       fromDate: strDateOnly(today),
       toDate: strDateOnly(addMonth(today)),
     };
@@ -46,36 +47,49 @@ class FlightSearchForm extends React.Component<*, *> {
     };
   }
 
-  render() {
+  onSearchSubmit = () => {
     const { fromCode, toCode, fromDate, toDate } = this.state;
+    this.props.onSearch({ fromCode, toCode, fromDate, toDate });
+  };
 
+  isFormValid() {
+    return ['fromCode', 'toCode', 'fromDate', 'toDate'].every(key => !!this.state[key]);
+  }
+
+  render() {
+    const { fromDate, toDate } = this.state;
     const { isSearching, searchFailed } = this.getSearchStates();
+    const { locations, onLocationSearch } = this.props;
+    const isValid = this.isFormValid();
+
     return (
-      <div>
+      <div className="FlightSearchForm">
         <p>Search or flight!</p>
-        <div>
+        <ui.InputRow>
           <span>From: </span>
-          <input
-            value={fromCode}
-            onChange={e => {
-              this.setState({ fromCode: e.target.value });
+          <ui.HorizontalTextSpacing />
+          <SearchLocations
+            onSearch={onLocationSearch}
+            onLocationChoose={locationId => {
+              this.setState({ fromCode: locationId });
             }}
-            className="AirportInput"
-            placeholder="e.g. PRG"
+            items={locations}
+            placeholder="Where are you e.g. Prague"
           />
-        </div>
-        <div>
+        </ui.InputRow>
+        <ui.InputRow>
           <span>To: </span>
-          <input
-            value={toCode}
-            onChange={e => {
-              this.setState({ toCode: e.target.value });
+          <ui.HorizontalTextSpacing />
+          <SearchLocations
+            onSearch={onLocationSearch}
+            onLocationChoose={locationId => {
+              this.setState({ toCode: locationId });
             }}
-            className="AirportInput"
-            placeholder="e.g. BCN"
+            items={locations}
+            placeholder="Where to go e.g. London"
           />
-        </div>
-        <div>
+        </ui.InputRow>
+        <ui.InputRow>
           <span>From Date: </span>
           <DateInput
             value={fromDate}
@@ -83,8 +97,8 @@ class FlightSearchForm extends React.Component<*, *> {
               this.setState({ fromDate: e.target.value });
             }}
           />
-        </div>
-        <div>
+        </ui.InputRow>
+        <ui.InputRow>
           <span>Till Date: </span>
           <DateInput
             value={toDate}
@@ -93,15 +107,9 @@ class FlightSearchForm extends React.Component<*, *> {
             }}
             placeholder="..."
           />
-        </div>
+        </ui.InputRow>
         <ui.VerticalSpacing />
-        <button
-          type="submit"
-          disabled={isSearching}
-          onClick={() => {
-            this.props.onSearch({ fromCode, toCode, fromDate, toDate });
-          }}
-        >
+        <button type="submit" disabled={isSearching || !isValid} onClick={this.onSearchSubmit}>
           {isSearching ? 'Searching ...' : 'Search'}
         </button>
         {searchFailed && (
@@ -268,17 +276,114 @@ class SearchResults extends React.Component<{ results: Array<*> }, *> {
   }
 }
 
+class SearchLocations extends React.Component<
+  {
+    onLocationChoose: (locationId: string) => any,
+    onSearch: (query: string) => any,
+    items: Array<{ id: string, title: string }>,
+    placeholder: string,
+  },
+  void
+> {
+  searchTimer: *;
+
+  filterItem = inputValue => item =>
+    !inputValue || item.title.toLowerCase().startsWith(inputValue.toLowerCase());
+
+  itemToString = (item: ?Object) => (item ? item.title : '');
+
+  onItemChange = item => {
+    this.props.onLocationChoose(item.id);
+  };
+
+  onInputValueChange = (inputValue: string) => {
+    this.searchTimer && clearTimeout(this.searchTimer);
+    if (!inputValue.length) {
+      return;
+    }
+    // Note: it should not trigger search for selected item as it does now.
+    // When user selects an item, its title is set as inputValue and triggers unnecessary search.
+    this.searchTimer = setTimeout(() => this.props.onSearch(inputValue), 350);
+  };
+
+  onRenderDownshift = ({
+    getInputProps,
+    getItemProps,
+    isOpen,
+    inputValue,
+    selectedItem,
+    highlightedIndex,
+  }) => {
+    // Note (empty array): If there is no input to filter with, do not show everything.
+    // Rather show nothing.
+    const filteredItems = inputValue ? this.props.items.filter(this.filterItem(inputValue)) : [];
+    const { placeholder } = this.props;
+
+    return (
+      <span className="AutocompleteBox">
+        <input {...getInputProps({ placeholder })} className="AutocompleteInput" />
+        {isOpen ? (
+          <div className="OverlayPositionBox">
+            <div className="AutocompleteOverlay">
+              {filteredItems.map((item, index) => (
+                <div
+                  {...getItemProps({ item })}
+                  key={item.id}
+                  style={{
+                    backgroundColor: highlightedIndex === index ? 'lightgreen' : 'white',
+                    fontWeight: selectedItem === item ? 'bold' : 'normal',
+                  }}
+                >
+                  {item.title}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </span>
+    );
+  };
+
+  render() {
+    return (
+      <div>
+        <Downshift
+          defaultHighlightedIndex={0}
+          itemToString={this.itemToString}
+          onInputValueChange={this.onInputValueChange}
+          onChange={this.onItemChange}
+          render={this.onRenderDownshift}
+          breakingChanges={{ resetInputOnSelection: true }}
+        />
+      </div>
+    );
+  }
+}
+
+type LocationItem = { id: string, title: string };
+
 class FlightSearchPage extends React.Component<
   *,
   {
     searchResults: Array<*>,
+    locationsMap: { [string]: LocationItem },
+    locations: Array<LocationItem>,
     searchStatus: 'idle' | 'fetching' | 'fetched' | 'failed',
   }
 > {
+  searchedLocations: Set<string>;
+
   constructor(props) {
     super(props);
 
-    this.state = { searchResults: [], searchStatus: 'idle' };
+    this.state = {
+      searchResults: [],
+      searchStatus: 'idle',
+      locationsMap: {},
+      locations: [],
+    };
+
+    this.searchedLocations = new Set();
   }
 
   onSearch = params => {
@@ -296,6 +401,34 @@ class FlightSearchPage extends React.Component<
     searchFlights(params).then(onOk, onErr);
   };
 
+  onLocationSearch = query => {
+    if (this.searchedLocations.has(query)) {
+      return;
+    }
+
+    this.searchedLocations.add(query);
+
+    const onOk = result => {
+      const locationsMap = { ...this.state.locationsMap };
+      for (const item of result) {
+        locationsMap[item.locationId] = { title: this.getLocationTitle(item), id: item.locationId };
+      }
+
+      // Note: locations is pre-computed state...
+      const locations = Object.keys(locationsMap).map(id => locationsMap[id]);
+      this.setState({ locationsMap, locations });
+    };
+
+    searchLocations(query).then(onOk);
+  };
+
+  getLocationTitle(location) {
+    // Note: prefer short ISO code if available
+    const countryName =
+      idx(location, _ => _.country.locationId) || idx(location, _ => _.country.name) || '';
+    return `${location.name} (${countryName})`;
+  }
+
   renderResults() {
     const { searchResults } = this.state;
 
@@ -311,11 +444,16 @@ class FlightSearchPage extends React.Component<
   }
 
   render() {
-    const { searchStatus } = this.state;
+    const { searchStatus, locations } = this.state;
     const resultsFetched = searchStatus === 'fetched';
     return (
       <div>
-        <FlightSearchForm onSearch={this.onSearch} searchStatus={searchStatus} />
+        <FlightSearchForm
+          onLocationSearch={this.onLocationSearch}
+          onSearch={this.onSearch}
+          searchStatus={searchStatus}
+          locations={locations}
+        />
         <ui.VerticalSpacing />
         {resultsFetched && this.renderResults()}
       </div>
